@@ -145,6 +145,31 @@ app.get('/usuarios', (req: Request, res: Response): any => {
     return res.json(usuariosPaginados);
 });
 
+type review = {
+    id: number,
+    pagina : number,
+    idUser : number,
+    idGame : number,
+    nota : number
+}
+const Reviews: review[] = [
+{
+    id: 1,
+    pagina : 1,
+    idUser : 1,
+    idGame : 1,
+    nota : 3
+},
+
+{
+    id: 2,
+    pagina : 1,
+    idUser : 2,
+    idGame : 1,
+    nota : 4
+},
+]
+
 app.get('/avaliacoes', (req: Request, res: Response): any => {
     const { pagina = 1, limite = 10 } = req.query;
 
@@ -155,5 +180,12 @@ app.get('/avaliacoes', (req: Request, res: Response): any => {
         return res.status(400).json({ message: "Página e Limite devem ser números" });
     }
 
+    const avaliacoesFiltrados = Reviews.filter(review => review.pagina === numeroPagina);
+
+    const indexInicial = (numeroPagina - 1) * numeroLimite;
+    const indexFinal = indexInicial + numeroLimite;
+
+    const avaliacoesPaginados = avaliacoesFiltrados.slice(indexInicial, indexFinal);
     
+    return res.json(avaliacoesPaginados);
 })
