@@ -189,3 +189,20 @@ app.get('/avaliacoes', (req: Request, res: Response): any => {
     
     return res.json(avaliacoesPaginados);
 })
+
+app.get('/avaliacoes/busca', (req: Request, res: Response): any => {
+    const { filter } = req.query;
+    const idAvaliacao = Number(filter);
+
+    if (!filter) {
+        return res.status(400).json({ message: "filtro Obrigatório" });
+    }
+
+    const avaliacoesPorbusca = Reviews.filter(review => review.id == idAvaliacao);
+
+    if (avaliacoesPorbusca.length === 0) {
+        return res.status(404).json({ message: "Nenhum avaliação encontrado" });
+    }
+
+    return res.json(avaliacoesPorbusca);
+});
