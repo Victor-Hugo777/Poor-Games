@@ -145,4 +145,15 @@ app.get('/usuarios', (req: Request, res: Response): any => {
     return res.json(usuariosPaginados);
 });
 
+app.get('/avaliacoes', (req: Request, res: Response): any => {
+    const { pagina = 1, limite = 10 } = req.query;
 
+    const numeroPagina = Number(pagina);
+    const numeroLimite = Number(limite);
+
+    if (isNaN(numeroPagina) || isNaN(numeroLimite)) {
+        return res.status(400).json({ message: "Página e Limite devem ser números" });
+    }
+
+    
+})
