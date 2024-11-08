@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Request, Response } from 'express';
+import { v7 as uuidv7 } from 'uuid';
 
 const app = express();
 
@@ -11,7 +12,7 @@ app.listen(3003, () => {
     console.log("Server rodando na porta 3003");
 });
 type game = {
-    id: number,
+    id: string,
     pagina: number,
     nome: string,
     dataLancamento: string,
@@ -22,7 +23,7 @@ type game = {
 
 const Games : game[] = [
     {
-        id: 1,
+        id: uuidv7(),
         pagina: 1,
         nome: "Tower Of Fantasy",
         dataLancamento: "16/12/2021",
@@ -30,7 +31,7 @@ const Games : game[] = [
         preco: 200,
     },
     {
-        id: 2,
+        id: uuidv7(),
         pagina: 1,
         nome: "Batman Arknight",
         dataLancamento: "23/06/2015",
@@ -76,14 +77,21 @@ app.get('/jogos/genero', (req: Request, res: Response): any => {
 });
 
 app.post('/jogos', (req: Request, res: Response): any => {
-    const { id, nome, dataLancamento, genero, preco } = req.body;
+    const {nome, dataLancamento, genero, preco } = req.body;
 
-    if (!id || !nome || !dataLancamento || !genero || !preco) {
+    if (!nome || !dataLancamento || !genero || !preco) {
         return res.status(400).json({ message: "Todos os campos são obrigatórios" });
     }
 
+    const idUnico = uuidv7();
+
+    const jogoExistente = Games.find(game => game.nome === nome);
+    if (jogoExistente) {
+        return res.status(400).json({ message: "Jogo com este ID já existe." });
+    }
+
     const novoJogo: game = {
-        id,
+        id: idUnico,
         pagina: 1,
         nome,
         dataLancamento,
@@ -97,8 +105,32 @@ app.post('/jogos', (req: Request, res: Response): any => {
 });
 
 app.put('/jogos',(req : Request, res : Response): any => {
+    const { id } = req.params;  
+    const { nome, dataLancamento, genero, preco } = req.body;
 
+    if (!nome || !dataLancamento || !genero || !preco) {
+        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+    }
+
+    const jogoIndex = Games.findIndex(game => game.id === String(id));
+
+    if (jogoIndex === -1) {
+        return res.status(404).json({ message: "Jogo não encontrado" });
+    }
+
+    const jogoAtualizado = {
+        ...Games[jogoIndex],
+        nome,
+        dataLancamento,
+        genero,
+        preco,
+    };
+
+    Games[jogoIndex] = jogoAtualizado;
+
+    return res.json(jogoAtualizado);
 });
+
 
 type user = {
     id: number,
