@@ -131,6 +131,20 @@ app.put('/jogos',(req : Request, res : Response): any => {
     return res.json(jogoAtualizado);
 });
 
+app.delete('/jogos/:id', (req: Request, res: Response): any => {
+    const { id } = req.params;
+
+    const jogoIndex = Games.findIndex(game => game.id === String(id));
+
+    if (jogoIndex === -1) {
+        return res.status(404).json({ message: "Jogo não encontrado" });
+    }
+
+    Games.splice(jogoIndex, 1);
+
+    return res.status(200).json({ message: "Jogo removido com sucesso" });
+});
+
 
 type user = {
     id: number,
