@@ -207,7 +207,7 @@ app.get('/usuarios/procurar', (req: Request, res: Response): any => {
 });
 
 type review = {
-    id: number,
+    id: string,
     pagina : number,
     idUser : number,
     idGame : number,
@@ -215,7 +215,7 @@ type review = {
 }
 const Reviews: review[] = [
 {
-    id: 1,
+    id: uuidv7(),
     pagina : 1,
     idUser : 1,
     idGame : 1,
@@ -223,7 +223,7 @@ const Reviews: review[] = [
 },
 
 {
-    id: 2,
+    id: uuidv7(),
     pagina : 1,
     idUser : 2,
     idGame : 1,
@@ -253,13 +253,12 @@ app.get('/avaliacoes', (req: Request, res: Response): any => {
 
 app.get('/avaliacoes/busca', (req: Request, res: Response): any => {
     const { filter } = req.query;
-    const idAvaliacao = Number(filter);
 
     if (!filter) {
         return res.status(400).json({ message: "filtro Obrigatório" });
     }
 
-    const avaliacoesPorbusca = Reviews.filter(review => review.id == idAvaliacao);
+    const avaliacoesPorbusca = Reviews.filter(review => review.id == filter);
 
     if (avaliacoesPorbusca.length === 0) {
         return res.status(404).json({ message: "Nenhum avaliação encontrado" });
@@ -268,3 +267,29 @@ app.get('/avaliacoes/busca', (req: Request, res: Response): any => {
     return res.json(avaliacoesPorbusca);
 });
 
+app.post('/avaliacoes', (req: Request, res: Response): any => {
+    const {idUser, idGame, nota } = req.body;
+
+    if (!idUser || !idGame || !nota) {
+        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+    }
+
+    const idUnico = uuidv7();
+
+    const avaliacaoExistente = Reviews.find(review => review.idUser === idUser);
+    if (avaliacaoExistente) {
+        return res.status(400).json({ message: "avaliacao com este usuario já existe." });
+    }
+
+    const novaAvaliacoes: review = {
+        id: idUnico,
+        pagina: 1,
+        idUser,
+        idGame,
+        nota
+    };
+
+    Reviews.push(novaAvaliacoes);
+
+    return res.status(201).json(novaAvaliacoes);
+});
