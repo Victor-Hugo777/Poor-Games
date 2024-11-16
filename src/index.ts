@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { Request, Response } from 'express';
 import { v7 as uuidv7 } from 'uuid';
+import db from './connection';
+
 
 const app = express();
 
@@ -11,285 +13,159 @@ app.use(cors());
 app.listen(3003, () => {
     console.log("Server rodando na porta 3003");
 });
-type game = {
-    id: string,
-    pagina: number,
-    nome: string,
-    dataLancamento: string,
-    genero: string
-    preco: number
-}
 
+  app.get('/jogos', async (req: Request, res: Response): Promise<any> => {
+    const { pagina = 1, limite = 10 } = req.query;
 
-const Games : game[] = [
-    {
-        id: uuidv7(),
-        pagina: 1,
-        nome: "Tower Of Fantasy",
-        dataLancamento: "16/12/2021",
-        genero: "MMORPG",
-        preco: 200,
-    },
-    {
-        id: uuidv7(),
-        pagina: 1,
-        nome: "Batman Arknight",
-        dataLancamento: "23/06/2015",
-        genero: "Ação",
-        preco: 145
-    }
-];
-
-app.get('/jogos', (req: Request, res: Response): any => {
-    const { página = 1, limite = 10 } = req.query;
-
-    const numeroPagina = Number(página);
+    const numeroPagina = Number(pagina);
     const numeroLimite = Number(limite);
 
     if (isNaN(numeroPagina) || isNaN(numeroLimite)) {
         return res.status(400).json({ message: "Página e Limite devem ser números" });
     }
 
-    const jogosFiltrados = Games.filter(game => game.pagina === numeroPagina);      
+    try {
+        const jogos = await db('jogos')
+            .select('*')
+            .orderBy('idjogo','asc')
+            //Páginação não está funcionando corretamente
+            //.where('paginajogo', numeroPagina)
+            .offset((numeroPagina - 1) * numeroLimite)
+            .limit(numeroLimite);
 
-    const indexInicial = (numeroPagina - 1) * numeroLimite;
-    const indexFinal = indexInicial + numeroLimite;
+        if (jogos.length === 0) {
+            return res.status(404).json({ message: "Nenhum jogo encontrado nesta página" });
+        }
 
-    const jogosPaginados = jogosFiltrados.slice(indexInicial, indexFinal);
+        return res.json(jogos);
 
-    return res.json(jogosPaginados);
+    } catch (error) {
+        console.error('Erro ao buscar jogos:', error);
+        return res.status(500).json({ message: 'Erro ao buscar jogos' });
+    }
 });
 
-app.get('/jogos/genero', (req: Request, res: Response): any => {
+app.get('/jogos/genero', async (req: Request, res: Response): Promise<any> => {
     const { genero } = req.query;
 
     if (!genero) {
-        return res.status(400).json({ message: "Gênero Obrigatório" });
+        return res.status(400).json({ message: "Gênero é obrigatório" });
     }
 
-    const jogosPorGenero = Games.filter(game => game.genero === genero);
+    try {
+        const jogos = await db('jogos')
+            .select('*')
+            .where('genero', 'like', `%${genero}%`);
 
-    if (jogosPorGenero.length === 0) {
-        return res.status(404).json({ message: "Nenhum jogo encontrado" });
+        if (jogos.length === 0) {
+            return res.status(404).json({ message: `Nenhum jogo encontrado para o gênero: ${genero}` });
+        }
+
+        return res.json(jogos);
+
+    } catch (error) {
+        console.error('Erro ao buscar jogos por gênero:', error);
+        return res.status(500).json({ message: 'Erro ao buscar jogos' });
     }
-
-    return res.json(jogosPorGenero);
 });
 
-app.post('/jogos', (req: Request, res: Response): any => {
-    const {nome, dataLancamento, genero, preco } = req.body;
+app.post('/jogos', async (req: Request, res: Response): Promise<any> => {
+    const { nomejogo, genero, datalancamento, paginajogo, preco } = req.body;
 
-    if (!nome || !dataLancamento || !genero || !preco) {
-        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+    if (!nomejogo || !genero || !datalancamento || !paginajogo || preco === undefined) {
+        return res.status(400).json({ message: 'Todos os campos (nomejogo, genero, dataLancamento, paginajogo, preco) são obrigatórios' });
     }
 
-    const idUnico = uuidv7();
+    try {
 
-    const jogoExistente = Games.find(game => game.nome === nome);
-    if (jogoExistente) {
-        return res.status(400).json({ message: "Jogo com este ID já existe." });
+        const jogoExistente = await db('jogos').where('nomejogo', nomejogo).first();
+
+        if (jogoExistente) {
+            return res.status(409).json({ message: 'Jogo já existe no banco de dados' });
+        }
+
+        const id = uuidv7();
+
+        const [novoJogo] = await db('jogos').insert({
+            nomejogo,
+            genero,
+            datalancamento,
+            paginajogo,
+            preco
+        }).returning('*');
+
+        return res.status(201).json(novoJogo);
+
+    } catch (error: unknown) {
+        console.error('Erro ao criar novo jogo:', error);
+
+        if (error instanceof Error) {
+            return res.status(500).json({ message: 'Erro ao criar novo jogo', error: error.message });
+        }
+
+        return res.status(500).json({ message: 'Erro desconhecido ao criar novo jogo' });
     }
-
-    const novoJogo: game = {
-        id: idUnico,
-        pagina: 1,
-        nome,
-        dataLancamento,
-        genero,
-        preco
-    };
-
-    Games.push(novoJogo);
-
-    return res.status(201).json(novoJogo);
 });
 
-app.put('/jogos',(req : Request, res : Response): any => {
-    const { id } = req.params;  
-    const { nome, dataLancamento, genero, preco } = req.body;
 
-    if (!nome || !dataLancamento || !genero || !preco) {
-        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+app.put('/jogos/:id', async (req: Request, res: Response): Promise<any> => {
+    const { id } = req.params;
+    const { nomejogo, genero, datalancamento, paginajogo, preco } = req.body;
+
+    if (!nomejogo || !genero || !datalancamento || !paginajogo || preco === undefined) {
+        return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
     }
 
-    const jogoIndex = Games.findIndex(game => game.id === String(id));
+    try {
+        const jogoAtualizado = await db('jogos')
+            .where('idjogo', id)
+            .update({
+                nomejogo,
+                genero,
+                datalancamento,
+                paginajogo,
+                preco
+            })
+            .returning('*');
 
-    if (jogoIndex === -1) {
-        return res.status(404).json({ message: "Jogo não encontrado" });
+        if (jogoAtualizado.length === 0) {
+            return res.status(404).json({ message: 'Jogo não encontrado' });
+        }
+
+        return res.status(200).json(jogoAtualizado[0]);
+    } catch (error) {
+        console.error('Erro ao atualizar o jogo:', error);
+        return res.status(500).json({ message: 'Erro ao atualizar o jogo' });
     }
-
-    const jogoAtualizado = {
-        ...Games[jogoIndex],
-        nome,
-        dataLancamento,
-        genero,
-        preco,
-    };
-
-    Games[jogoIndex] = jogoAtualizado;
-
-    return res.json(jogoAtualizado);
 });
 
-app.delete('/jogos/:id', (req: Request, res: Response): any => {
+app.delete('/jogos/:id', async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
-    const jogoIndex = Games.findIndex(game => game.id === String(id));
+    try {
+        const jogo = await db('jogos').where('idjogo', id).first();
 
-    if (jogoIndex === -1) {
-        return res.status(404).json({ message: "Jogo não encontrado" });
+        if (!jogo) {
+            return res.status(404).json({ message: `Jogo com ID ${id} não encontrado` });
+        }
+
+        await db('jogos').where('idjogo', id).del();
+
+        return res.status(200).json({ message: `Jogo com ID ${id} deletado com sucesso` });
+    } catch (error) {
+        console.error('Erro ao deletar jogo:', error);
+        return res.status(500).json({ message: 'Erro ao deletar jogo' });
     }
-
-    Games.splice(jogoIndex, 1);
-
-    return res.status(200).json({ message: "Jogo removido com sucesso" });
 });
 
-type user = {
-    id: number,
-    pagina : number,
-    nick: string,
-    senha: string 
-    email: string,
-}
-const Users: user[] = [
-{
-    id: 1,
-    pagina : 1,
-    nick: "ADCpçãodaFamilia",
-    senha:"SkibidiToiletRizz",
-    email: "espantaxota@gmail.com"
-},
-
-{
-    id: 2,
-    pagina :1,
-    nick: "Momoi",
-    senha:"Kuyashi",
-    email: "Kachira@gmail.com" 
-},
-]
-
-app.get('/usuarios', (req: Request, res: Response): any => {
-    const { pagina = 1, limite = 10 } = req.query;
-
-    const numeroPagina = Number(pagina);
-    const numeroLimite = Number(limite);
-
-    if (isNaN(numeroPagina) || isNaN(numeroLimite)) {
-        return res.status(400).json({ message: "Página e Limite devem ser números" });
-    }
-
-    const usuariosFiltrados = Users.filter(user => user.pagina === numeroPagina);
-
-    const indexInicial = (numeroPagina - 1) * numeroLimite;
-    const indexFinal = indexInicial + numeroLimite;
-
-    const usuariosPaginados = usuariosFiltrados.slice(indexInicial, indexFinal);
-
-    return res.json(usuariosPaginados);
-});
-
-app.get('/usuarios/procurar', (req: Request, res: Response): any => {
-    const { procurar } = req.query;
-
-    if (!procurar) {
-        return res.status(400).json({ message: "Nome Obrigatório" });
-    }
-
-    const procurarPorUsuarios = Users.filter(user => user.nick === procurar);
-
-    if (procurarPorUsuarios.length === 0) {
-        return res.status(404).json({ message: "Nenhum usuario encontrado" });
-    }
-
-    return res.json(procurarPorUsuarios);
-});
-
-type review = {
-    id: string,
-    pagina : number,
-    idUser : number,
-    idGame : number,
-    nota : number
-}
-const Reviews: review[] = [
-{
-    id: uuidv7(),
-    pagina : 1,
-    idUser : 1,
-    idGame : 1,
-    nota : 3
-},
-
-{
-    id: uuidv7(),
-    pagina : 1,
-    idUser : 2,
-    idGame : 1,
-    nota : 4
-},
-]
-
-app.get('/avaliacoes', (req: Request, res: Response): any => {
-    const { pagina = 1, limite = 10 } = req.query;
-
-    const numeroPagina = Number(pagina);
-    const numeroLimite = Number(limite);
-
-    if (isNaN(numeroPagina) || isNaN(numeroLimite)) {
-        return res.status(400).json({ message: "Página e Limite devem ser números" });
-    }
-
-    const avaliacoesFiltrados = Reviews.filter(review => review.pagina === numeroPagina);
-
-    const indexInicial = (numeroPagina - 1) * numeroLimite;
-    const indexFinal = indexInicial + numeroLimite;
-
-    const avaliacoesPaginados = avaliacoesFiltrados.slice(indexInicial, indexFinal);
+app.get('/usuarios', async (req: Request, res: Response): Promise<any> =>{
     
-    return res.json(avaliacoesPaginados);
 })
 
-app.get('/avaliacoes/busca', (req: Request, res: Response): any => {
-    const { filter } = req.query;
 
-    if (!filter) {
-        return res.status(400).json({ message: "filtro Obrigatório" });
-    }
 
-    const avaliacoesPorbusca = Reviews.filter(review => review.id == filter);
 
-    if (avaliacoesPorbusca.length === 0) {
-        return res.status(404).json({ message: "Nenhum avaliação encontrado" });
-    }
 
-    return res.json(avaliacoesPorbusca);
-});
 
-app.post('/avaliacoes', (req: Request, res: Response): any => {
-    const {idUser, idGame, nota } = req.body;
 
-    if (!idUser || !idGame || !nota) {
-        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
-    }
 
-    const idUnico = uuidv7();
-
-    const avaliacaoExistente = Reviews.find(review => review.idUser === idUser);
-    if (avaliacaoExistente) {
-        return res.status(400).json({ message: "avaliacao com este usuario já existe." });
-    }
-
-    const novaAvaliacoes: review = {
-        id: idUnico,
-        pagina: 1,
-        idUser,
-        idGame,
-        nota
-    };
-
-    Reviews.push(novaAvaliacoes);
-
-    return res.status(201).json(novaAvaliacoes);
-});
