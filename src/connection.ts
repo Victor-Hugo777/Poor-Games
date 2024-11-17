@@ -3,9 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-console.log(process.env.DB_PASSWORD); // Verifique a senha carregada aqui
-
-
 const db = knex({
   client: 'pg',
   connection: {

@@ -1,5 +1,5 @@
-import { v7 } from 'uuid'
+import { v7 } from "uuid";
 
 export function generateId() {
-    return v7();
+  return v7();
 }
