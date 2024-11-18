@@ -4,10 +4,11 @@ export class GameData {
   verJogos = async (): Promise<any> => {
     try {
       const jogos = await db("jogos").select("*").orderBy("idjogo", "asc");
+      console.log("camada data")
 
       return jogos;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 

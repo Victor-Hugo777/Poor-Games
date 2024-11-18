@@ -7,8 +7,8 @@ export class GameBusiness {
     try {
       const jogos = await this.gameData.verJogos();
       return jogos;
-    } catch (error) {
-      throw new Error("Erro ao buscar jogos na camada Business");
+    } catch (error:any) {
+      throw new Error(error.message);
     }
   };
 
