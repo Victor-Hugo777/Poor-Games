@@ -1,88 +1,98 @@
-import { UserData } from "../data/UserData";
+import { UserData } from "../data/userData"
 
 export class UserBusiness {
   userData = new UserData();
 
-  verUsuarios = async (): Promise<any> => {
+  verUsuarios = async (page : number,limit : number): Promise<any> => {
     try {
-      const usuarios = await this.userData.verUsuarios();
+      const usuarios = await this.userData.verUsuarios(page,limit);
       return usuarios;
-    } catch (error) {
-      throw new Error("Erro ao buscar usuarios na camada business");
+    
+    } catch (error:any) {
+      throw {status : 500, message: "Erro ao buscar Usuários"}
     }
   };
 
-  buscarUsuarioPorId = async (id: string): Promise<any> => {
-    if (!id) {
-      throw new Error("O ID é obrigatório");
-    }
-
+  buscarUsuarioPorId = async (id : string): Promise<any> => {
     try {
-      return await this.userData.buscarUsuarioPorId(id);
-    } catch (error) {
-      throw new Error("Erro ao buscar usuário na camada Business");
-    }
-  };
+      const usuario = await this.userData.buscarUsuarioporId(id);
+      if(usuario === undefined) {
+        throw {status : 404, message: "O Usuário inserido não existe ou não foi encontrado"}
+      }   
+      return usuario;
+    } catch (error : any) {
+      throw {status : error.status , message: error.message}
+  }  
+}
 
-  criarUsuario = async (
-    paginaUsuario: number,
-    nickUsuario: string,
-    senha: number,
-    email: string
+  cadastrarUsuario = async (
+    idusuario : string,
+    nickusuario : string,
+    senha :string,
+    email : string
   ): Promise<any> => {
-    if (!nickUsuario || !senha || !email) {
-      throw new Error("Todos os campos são obrigatórios");
+    try{
+   
+    const nickExistente = await this.userData.buscarUsuarioPorNick(nickusuario);
+    if (nickExistente) {
+      throw { status : 400 , message:`O nick ${nickusuario} ja existe`};
     }
 
-    try {
-      const usuarioExistente = await this.userData.buscarUsuarioPorNickOuEmail(
-        nickUsuario,
-        email
-      );
-      if (usuarioExistente) {
-        throw new Error("Usuário já existe com esse nick ou email");
-      }
+    const emailExistente = await this.userData.buscarUsuarioPorEmail(email);
+    if (emailExistente) {
+      throw { status : 400 , message:`O email ${email} ja existe`};
+    }
 
-      return await this.userData.criarUsuario(
-        paginaUsuario,
-        nickUsuario,
+
+      return await this.userData.cadastrarUsuario(
+        idusuario,
+        nickusuario,
         senha,
         email
       );
-    } catch (error) {
-      throw new Error("Erro ao criar usuário");
+    } catch (error : any) {
+      console.error('Erro ao criar Usuário Business: ', error);
+      throw {status : error.status , message: error.message}
     }
-  };
+  
+}
 
-  atualizarUsuario = async (
-    id: string,
-    paginaUsuario: number,
-    nickUsuario: string,
-    senha: number,
-    email: string
-  ): Promise<any> => {
-    if (!paginaUsuario || !nickUsuario || !senha || !email) {
-      throw new Error("Todos os campos são obrigatórios");
+atualizarUsuario = async (idusuario : string, nickusuario : string, senha :string, email : string): Promise<any> => {
+  try {
+
+    const usuarioExistente = await this.userData.buscarUsuarioporId(idusuario);
+    if (!usuarioExistente) {
+      throw { status : 404 , message:"O Usuário que você quer atualizar não existe"};
     }
 
-    try {
-      return await this.userData.atualizarUsuario(
-        id,
-        paginaUsuario,
-        nickUsuario,
-        senha,
-        email
-      );
-    } catch (error) {
-      throw new Error("Erro ao atualizar usuário");
+    const nickExistente = await this.userData.buscarUsuarioPorNick(nickusuario);
+    if (nickExistente) {
+      throw { status : 400 , message:`O nick ${nickusuario} ja existe`};
     }
-  };
 
-  deletarUsuario = async (id: string): Promise<void> => {
-    try {
-      await this.userData.deletarUsuario(id);
-    } catch (error) {
-      throw new Error("Erro ao deletar usuário");
+    const emailExistente = await this.userData.buscarUsuarioPorEmail(email);
+    if (emailExistente) {
+      throw { status : 400 , message:`O email ${email} ja existe`};
     }
-  };
+
+    return await this.userData.atualizarUsuario(idusuario, nickusuario, senha, email);
+  } catch (error : any) {
+  console.error('Erro ao atualizar Usuário Business:', error);
+  throw {status : error.status , message: error.message}
+  }
+};
+
+deletarUsuario = async (idusuario : string): Promise<any> => {
+  try {
+    const usuarioExistente = await this.userData.buscarUsuarioporId(idusuario);
+    if (!usuarioExistente) {
+      throw { status : 404 , message:"O Usuário que vocé quer deletar não existe"};
+    }
+    return await this.userData.deletarUsuario(idusuario);
+  } catch (error : any) {
+    console.error('Erro ao deletar Usuário Business:', error);
+    throw {status : error.status , message: error.message}
+  }
+};
+
 }

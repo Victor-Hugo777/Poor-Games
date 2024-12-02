@@ -3,62 +3,49 @@ import { GameData } from "../data/gameData";
 export class GameBusiness {
   gameData = new GameData();
 
-  verJogos = async (): Promise<any> => {
+  verJogos = async (page : number,limit : number): Promise<any> => {
     try {
-      const jogos = await this.gameData.verJogos();
+      const jogos = await this.gameData.verJogos(page,limit);
       return jogos;
     } catch (error:any) {
-      throw new Error(error.message);
+      throw {status : 500, message: "Erro ao buscar jogos"}
     }
   };
 
   buscarJogosPorGenero = async (genero: string): Promise<any> => {
-    if (!genero) {
-      throw new Error("Gênero é obrigatório");
-    }
-
-    try {
+    try{
+   
       const jogos = await this.gameData.buscarJogosPorGenero(genero);
       return jogos;
     } catch (error) {
-      throw new Error("Erro ao buscar jogos por gênero na camada Business");
+      throw {status : 500 , message:"Erro ao buscar jogos por gênero na camada Business"};
     }
   };
 
   criarJogo = async (
+    idjogo : string,
     nomejogo: string,
     genero: string,
     datalancamento: string,
-    paginajogo: number,
     preco: number
   ): Promise<any> => {
-    if (
-      !nomejogo ||
-      !genero ||
-      !datalancamento ||
-      !paginajogo ||
-      preco === undefined
-    ) {
-      throw new Error(
-        "Todos os campos (nomejogo, genero, dataLancamento, paginajogo, preco) são obrigatórios"
-      );
-    }
-
-    try {
+    try{
+    
       const jogoExistente = await this.gameData.buscarJogoPorNome(nomejogo);
       if (jogoExistente) {
-        throw new Error("Jogo já existe no banco de dados");
+        throw { status : 409 , message: `O jogo ${nomejogo} ja existe`};
       }
 
       return await this.gameData.criarJogo(
+        idjogo,
         nomejogo,
         genero,
         datalancamento,
-        paginajogo,
         preco
       );
-    } catch (error) {
-      throw new Error("Erro ao criar novo jogo");
+    } catch (error : any) {
+      console.error('Erro ao criar jogo: ', error);
+      throw {status : error.status , message: error.message}
     }
   };
 
@@ -67,38 +54,41 @@ export class GameBusiness {
     nomejogo: string,
     genero: string,
     datalancamento: string,
-    paginajogo: number,
     preco: number
   ): Promise<any> => {
-    if (
-      !nomejogo ||
-      !genero ||
-      !datalancamento ||
-      !paginajogo ||
-      preco === undefined
-    ) {
-      throw new Error("Todos os campos são obrigatórios");
-    }
+    try{
 
-    try {
+      const jogoExistente = await this.gameData.buscarJogoPorNome(nomejogo);
+      if (jogoExistente) {
+        throw { status : 409 , message: `O jogo ${nomejogo} ja existe`};
+      }
+
+      const jogoExistenteId = await this.gameData.buscarJogoPorId(id);
+      if (jogoExistenteId == undefined) {
+        throw { status : 400 , message: "O Jogo que você quer atualizar não existe" };
+      }
       return await this.gameData.atualizarJogo(
         id,
         nomejogo,
         genero,
         datalancamento,
-        paginajogo,
         preco
       );
-    } catch (error) {
-      throw new Error("Erro ao atualizar o jogo");
+    } catch (error : any) {
+      console.error('Erro ao atualizar jogo: ', error);
+      throw {status : error.status , message: error.message}
     }
   };
 
   deletarJogo = async (id: string): Promise<void> => {
     try {
+      const idExistente = await this.gameData.buscarJogoPorId(id)
+      if(idExistente == undefined){
+        throw {status : 400 , message: "O Jogo que vocé quer deletar não existe"}
+      }
       await this.gameData.deletarJogo(id);
-    } catch (error) {
-      throw new Error("Erro ao deletar jogo");
+    } catch (error : any) {
+      throw {status : 500, message: error.message};
     }
   };
 }

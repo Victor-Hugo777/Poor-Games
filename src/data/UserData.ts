@@ -1,96 +1,103 @@
 import db from "../connection";
 
 export class UserData {
-  verUsuarios = async (): Promise<any> => {
+  verUsuarios = async (page: number, limit: number): Promise<any> => {
     try {
+      const offset = (page - 1) * limit;
       const usuarios = await db("usuarios")
         .select("*")
-        .orderBy("idusuario", "asc");
-
-      return usuarios;
+        .orderBy("idusuario", "asc")
+        .limit(limit)
+        .offset(offset);
+      
+        return usuarios;
+    
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
-  buscarUsuarioPorId = async (id: string): Promise<any> => {
+  buscarUsuarioporId = async (id: string): Promise<any> => {
     try {
-      const usuario = await db("Usuarios").where("idUsuario", id).first();
-
-      if (!usuario) {
-        return null;
-      }
-
+      const usuario = await db("usuarios").where("idusuario", id).first();
       return usuario;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      console.log(error);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
-  criarUsuario = async (
-    paginaUsuario: number,
-    nickUsuario: string,
-    senha: number,
+  buscarUsuarioPorNick = async (nickUsuario: string): Promise<any> => {
+    try {
+      const usuario = await db("usuarios")
+        .where("nickusuario", nickUsuario)
+        .first();
+        return usuario;
+    
+      } catch (error: any) {
+      throw new Error(error.sqlMessage || error.message || error.stack);
+    }
+  };
+
+  buscarUsuarioPorEmail = async (email: string): Promise<any> => {
+    try {
+      const usuario = await db("usuarios")
+        .where("email", email)
+        .first();
+      return usuario;
+
+    } catch (error: any) {
+      throw new Error(error.sqlMessage || error.message || error.stack);
+    }
+  };
+  cadastrarUsuario = async (
+    idusuario: string,
+    nickusuario: string,
+    senha: string,
     email: string
   ): Promise<any> => {
     try {
-      const [novoUsuario] = await db("Usuarios")
+      const [novoUsuario] = await db("usuarios")
         .insert({
-          paginaUsuario,
-          nickUsuario,
+          idusuario,
+          nickusuario,
           senha,
           email,
         })
         .returning("*");
       return novoUsuario;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
   atualizarUsuario = async (
     id: string,
-    paginaUsuario: number,
-    nickUsuario: string,
-    senha: number,
+    nickusuario: string,
+    senha: string,
     email: string
   ): Promise<any> => {
     try {
-      const usuarioAtualizado = await db("Usuarios")
-        .where("idUsuario", id)
+      const [usuarioAtualizado] = await db("usuarios")
+        .where("idusuario", id)
         .update({
-          paginaUsuario,
-          nickUsuario,
+          nickusuario,
           senha,
           email,
         })
         .returning("*");
       return usuarioAtualizado;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
-  deletarUsuario = async (id: string): Promise<void> => {
+  deletarUsuario = async (id: string): Promise<any> => {
     try {
-      await db("Usuarios").where("idUsuario", id).del();
+      const usuarioDeletado = await db("usuarios").where("idusuario", id).del();
+      return usuarioDeletado;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
-    }
-  };
-
-  buscarUsuarioPorNickOuEmail = async (
-    nickUsuario: string,
-    email: string
-  ): Promise<any> => {
-    try {
-      const usuario = await db("Usuarios")
-        .where("nickUsuario", nickUsuario)
-        .orWhere("email", email)
-        .first();
-      return usuario;
-    } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 }

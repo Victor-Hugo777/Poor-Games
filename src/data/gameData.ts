@@ -1,57 +1,71 @@
 import db from "../connection";
 
-export class GameData {
-  verJogos = async (): Promise<any> => {
-    try {
-      const jogos = await db("jogos").select("*").orderBy("idjogo", "asc");
-      console.log("camada data")
 
+export class GameData {
+  verJogos = async (page: number, limit: number): Promise<any> => {
+    try {
+        const offset = (page - 1) * limit;
+        const jogos = await db("jogos")
+            .select("*")
+            .orderBy("idjogo", "asc")
+            .limit(limit)
+            .offset(offset);
+        return jogos;
+    } catch (error: any) {
+        throw new Error(error.sqlMessage || error.message || error.stack);
+    }
+}
+
+  buscarJogosPorGenero = async (genero: string): Promise<any> => {
+    try {
+      const jogos = await db("jogos")
+        .select("*")
+        .where("genero",genero)
       return jogos;
     } catch (error: any) {
       throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
-  buscarJogosPorGenero = async (genero: string): Promise<any> => {
-    try {
-      const jogos = await db("jogos")
-        .select("*")
-        .where("genero", "like", `%${genero}%`);
-      return jogos;
-    } catch (error: any) {
-      throw new Error(error.message || error.stack);
+  buscarJogoPorId = async (idJogo : string): Promise<any> =>{
+    try{
+    const jogo = await db("jogos").where("idjogo" , idJogo).first();
+    return jogo;
+    }catch(error : any){
+      console.log(error)
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
-  };
+  }
 
   buscarJogoPorNome = async (nomejogo: string): Promise<any> => {
     try {
       const jogo = await db("jogos").where("nomejogo", nomejogo).first();
       return jogo;
-    } catch (error) {
-      throw new Error("Erro ao buscar jogo por nome");
+    } catch (error :any) {
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
   criarJogo = async (
+    idjogo: string,
     nomejogo: string,
     genero: string,
     datalancamento: string,
-    paginajogo: number,
     preco: number
   ): Promise<any> => {
     try {
       const [novoJogo] = await db("jogos")
         .insert({
+          idjogo,
           nomejogo,
           genero,
           datalancamento,
-          paginajogo,
           preco,
         })
         .returning("*");
       return novoJogo;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
@@ -60,7 +74,6 @@ export class GameData {
     nomejogo: string,
     genero: string,
     datalancamento: string,
-    paginajogo: number,
     preco: number
   ): Promise<any> => {
     try {
@@ -70,13 +83,12 @@ export class GameData {
           nomejogo,
           genero,
           datalancamento,
-          paginajogo,
           preco,
         })
         .returning("*");
       return jogoAtualizado;
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 
@@ -84,7 +96,7 @@ export class GameData {
     try {
       await db("jogos").where("idjogo", id).del();
     } catch (error: any) {
-      throw new Error(error.message || error.stack);
+      throw new Error(error.sqlMessage || error.message || error.stack);
     }
   };
 }

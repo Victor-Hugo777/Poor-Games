@@ -5,8 +5,8 @@ export const userRouter = express.Router();
 
 const userController = new UserController();
 
-userRouter.get("/usuarios", userController.verUsuarios);
-userRouter.get("usuarios/:id", userController.buscarUsuarioPorId);
-userRouter.post("usuarios", userController.criarUsuario);
-userRouter.put("/usuarios/:id", userController.atualizarUsuario);
-userRouter.delete("/usuarios/:id", userController.deletarUsuario);
+userRouter.get("/", userController.verUsuarios);
+userRouter.get("/:id", userController.buscarUsuarioPorId);
+userRouter.post("/", userController.cadastrarUsuario);
+userRouter.put("/:id", userController.atualizarUsuario);
+userRouter.delete("/:id", userController.deletarUsuario);
