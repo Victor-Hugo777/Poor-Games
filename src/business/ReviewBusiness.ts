@@ -1,4 +1,4 @@
-import { ReviewData } from "../data/ReviewData";
+import { ReviewData } from "../data/reviewData";
 
 export class ReviewBusiness {
   reviewData = new ReviewData();
